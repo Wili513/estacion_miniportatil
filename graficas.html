@@ -1,17 +1,112 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Gráficas DHT11</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pluviómetro - Gráficas</title>
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h2>Gráficas DHT11</h2>
-  <a href="index.html">Volver al Dashboard</a>
-  <canvas id="graficaTemp" width="400" height="200"></canvas>
-  <canvas id="graficaHum" width="400" height="200"></canvas>
-  <script src="js/storage.js"></script>
-  <script src="js/charts.js"></script>
+  <nav>
+    <ul>
+      <li><a href="index.html">Datos</a></li>
+      <li><a href="graficas.html" class="activo">Gráficas</a></li>
+      <li><a href="resumen.html">Resumen Diario</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <h2>Gráfica de Lluvia</h2>
+
+    <div class="controles">
+      <label>Desde: <input type="date" id="filtro-desde" /></label>
+      <label>Hasta: <input type="date" id="filtro-hasta" /></label>
+      <label>Cantidad:
+        <select id="cantidad" onchange="generarGrafica()">
+          <option value="10">Últimos 10</option>
+          <option value="20">Últimos 20</option>
+          <option value="50">Últimos 50</option>
+          <option value="todos">Todos</option>
+        </select>
+      </label>
+      <button onclick="generarGrafica()">Aplicar Filtros</button>
+      <button onclick="limpiarFiltros()">Limpiar</button>
+    </div>
+
+    <canvas id="rainChart" height="300"></canvas>
+  </main>
+
+  <script>
+    let chart;
+
+    function generarGrafica() {
+      const datos = JSON.parse(localStorage.getItem("datosLluvia") || "[]");
+      if (!datos.length) {
+        alert("No hay datos guardados.");
+        return;
+      }
+
+      const desde = document.getElementById("filtro-desde").value;
+      const hasta = document.getElementById("filtro-hasta").value;
+      const cantidad = document.getElementById("cantidad").value;
+
+      // ✅ Filtrar por fechas si se especifican
+      let filtrados = datos.filter(d => {
+        const fecha = d.fecha; // formato "YYYY-MM-DD"
+        return (!desde || fecha >= desde) && (!hasta || fecha <= hasta);
+      });
+
+      // ✅ Aplicar cantidad
+      if (cantidad !== "todos") {
+        filtrados = filtrados.slice(0, parseInt(cantidad));
+      }
+
+      const etiquetas = filtrados.map(d => `${d.fecha} ${d.hora}`).reverse();
+      const valores = filtrados.map(d => parseFloat(d.valor)).reverse();
+
+      const ctx = document.getElementById("rainChart").getContext("2d");
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: etiquetas,
+          datasets: [{
+            label: "Lluvia (mm)",
+            data: valores,
+            backgroundColor: "rgba(0, 123, 255, 0.5)",
+            borderColor: "rgba(0, 123, 255, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              ticks: { maxRotation: 60, minRotation: 45 }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Milímetros" }
+            }
+          },
+          plugins: {
+            legend: { position: "top" },
+            tooltip: { mode: "index", intersect: false }
+          }
+        }
+      });
+    }
+
+    function limpiarFiltros() {
+      document.getElementById("filtro-desde").value = "";
+      document.getElementById("filtro-hasta").value = "";
+      document.getElementById("cantidad").value = "10";
+      generarGrafica();
+    }
+
+    window.onload = generarGrafica;
+  </script>
 </body>
 </html>
