@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resumen Diario de Lluvia</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="index.html">Datos</a></li>
+      <li><a href="graficas.html">Gráficas</a></li>
+      <li><a href="resumen.html" class="activo">Resumen Diario</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <h2>Resumen de Lluvia por Día</h2>
+    <div class="controles">
+      <button onclick="exportarResumenCSV()">Exportar CSV</button>
+      <button onclick="exportarResumenExcel()">Exportar Excel</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Total Lluvia (mm)</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-resumen"></tbody>
+    </table>
+  </main>
+
+  <script>
+    const topic = "pluviometro/dato";
+    let resumen = {};
+
+    const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+
+    client.on("connect", () => {
+      console.log("Conectado al broker");
+      client.subscribe(topic);
+    });
+
+    client.on("message", (topic, message) => {
+      const valor = message.toString();
+      const ahora = new Date();
+      const fecha = ahora.toLocaleDateString('sv-SE'); // formato yyyy-mm-dd
+      const hora = ahora.toLocaleTimeString();
+
+      // Guardar en localStorage
+      let datos = JSON.parse(localStorage.getItem("datosLluvia") || "[]");
+      datos.unshift({ fecha, hora, valor });
+      localStorage.setItem("datosLluvia", JSON.stringify(datos));
+
+      cargarDatos(); // actualizar resumen
+    });
+
+    function cargarDatos() {
+      const guardados = localStorage.getItem("datosLluvia");
+      if (!guardados) return;
+
+      const datos = JSON.parse(guardados);
+      resumen = {};
+
+      datos.forEach(d => {
+        const fecha = d.fecha;
+        const valor = parseFloat(d.valor);
+        if (!isNaN(valor)) {
+          resumen[fecha] = (resumen[fecha] || 0) + valor;
+        }
+      });
+
+      mostrarResumen();
+    }
+
+    function mostrarResumen() {
+      const tbody = document.getElementById("tabla-resumen");
+      tbody.innerHTML = "";
+
+      const fechas = Object.keys(resumen).sort();
+      if (fechas.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='2'>Sin datos</td></tr>";
+        return;
+      }
+
+      fechas.forEach(fecha => {
+        const fila = `<tr>
+          <td>${fecha}</td>
+          <td>${resumen[fecha].toFixed(2)}</td>
+        </tr>`;
+        tbody.innerHTML += fila;
+      });
+    }
+
+    function exportarResumenCSV() {
+      let csv = "Fecha,Lluvia total (mm)\n";
+      Object.keys(resumen).forEach(fecha => {
+        csv += `${fecha},${resumen[fecha].toFixed(2)}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "resumen_lluvia.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function exportarResumenExcel() {
+      const hoja = Object.keys(resumen).map(fecha => ({
+        Fecha: fecha,
+        Lluvia: parseFloat(resumen[fecha].toFixed(2))
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(hoja);
+      XLSX.utils.book_append_sheet(wb, ws, "Resumen");
+      XLSX.writeFile(wb, "resumen_lluvia.xlsx");
+    }
+
+    window.onload = cargarDatos;
+  </script>
+</body>
+</html>

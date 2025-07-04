@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pluviómetro - Datos de Lluvia</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <nav>
+  <ul>
+    <li><a href="index.html" class="activo">Datos</a></li>
+    <li><a href="graficas.html">Gráficas</a></li>
+    <li><a href="resumen.html">Resumen Diario</a></li>
+  </ul>
+  </nav>
+
+
+  <main>
+    <h2>Lecturas de lluvia</h2>
+
+    <div class="controles">
+      <label for="cantidad">Mostrar últimos:</label>
+      <select id="cantidad" onchange="actualizarTabla()">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="todos">Todos</option>
+      </select>
+    <div class="filtros">
+      <label>Desde: <input type="date" id="filtro-desde"></label>
+      <label>Hasta: <input type="date" id="filtro-hasta"></label>
+      <label>Min (mm): <input type="number" id="filtro-min" step="0.01"></label>
+      <label>Max (mm): <input type="number" id="filtro-max" step="0.01"></label>
+      <button onclick="aplicarFiltros()">Aplicar filtros</button>
+      <button onclick="limpiarFiltros()">Limpiar</button>
+    </div>
+
+
+      <button onclick="exportarCSV()">Exportar CSV</button>
+      <button onclick="exportarExcel()">Exportar Excel</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Hora</th>
+          <th>Lluvia (mm)</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-datos">
+        <tr><td colspan="4">Cargando datos...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
